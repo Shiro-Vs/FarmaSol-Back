@@ -9,5 +9,4 @@ public class FarmaSolBackApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(FarmaSolBackApplication.class, args);
 	}
-
 }
