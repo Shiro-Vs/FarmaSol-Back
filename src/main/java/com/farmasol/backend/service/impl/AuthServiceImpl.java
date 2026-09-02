@@ -38,12 +38,16 @@ public class AuthServiceImpl implements AuthService {
         if (clienteRepository.existsByCorreo(request.getCorreo())) {
             throw new BusinessException("El correo ya está registrado");
         }
+        if (clienteRepository.existsByDni(request.getDni())) {
+            throw new BusinessException("El DNI / Cédula ya está registrado");
+        }
 
         Cliente cliente = Cliente.builder()
                 .nombres(request.getNombres())
                 .apellidos(request.getApellidos())
                 .usuario(request.getUsuario())
                 .correo(request.getCorreo())
+                .dni(request.getDni())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .telefono(request.getTelefono())
                 .activo(true)

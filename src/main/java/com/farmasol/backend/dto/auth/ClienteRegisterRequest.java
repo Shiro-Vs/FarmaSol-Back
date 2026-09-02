@@ -24,6 +24,10 @@ public class ClienteRegisterRequest {
     @Size(min = 3, max = 50, message = "El usuario debe tener entre 3 y 50 caracteres")
     private String usuario;
 
+    @NotBlank(message = "El DNI / Cédula es obligatorio")
+    @Size(min = 6, max = 20, message = "El DNI / Cédula debe tener entre 6 y 20 caracteres")
+    private String dni;
+
     @NotBlank(message = "El correo es obligatorio")
     @Email(message = "El correo no tiene un formato válido")
     private String correo;

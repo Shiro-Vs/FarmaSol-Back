@@ -1,6 +1,7 @@
 package com.farmasol.backend.model;
 
 import com.farmasol.backend.model.enums.EstadoPedido;
+import com.farmasol.backend.model.enums.TipoEntrega;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -47,6 +48,11 @@ public class Pedido {
     @Builder.Default
     private EstadoPedido estado = EstadoPedido.PENDIENTE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_entrega", nullable = false, length = 20)
+    @Builder.Default
+    private TipoEntrega tipoEntrega = TipoEntrega.DELIVERY;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;
 
@@ -61,13 +67,14 @@ public class Pedido {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
-    @Column(name = "envio_quien_recibe", nullable = false, length = 120)
+    // --- Datos de envío a domicilio (DELIVERY) ---
+    @Column(name = "envio_quien_recibe", length = 120)
     private String envioQuienRecibe;
 
-    @Column(name = "envio_telefono", nullable = false, length = 20)
+    @Column(name = "envio_telefono", length = 20)
     private String envioTelefono;
 
-    @Column(name = "envio_direccion", nullable = false, length = 255)
+    @Column(name = "envio_direccion", length = 255)
     private String envioDireccion;
 
     @Column(name = "envio_distrito", length = 100)
@@ -75,6 +82,16 @@ public class Pedido {
 
     @Column(name = "envio_referencia", length = 255)
     private String envioReferencia;
+
+    // --- Datos de retiro en botica (RECOJO_TIENDA) ---
+    @Column(name = "recojo_sede", length = 150)
+    private String recojoSede;
+
+    @Column(name = "recojo_nombre", length = 120)
+    private String recojoNombre;
+
+    @Column(name = "recojo_dni", length = 20)
+    private String recojoDni;
 
     @Column(name = "fecha_pedido", nullable = false, updatable = false)
     private LocalDateTime fechaPedido;

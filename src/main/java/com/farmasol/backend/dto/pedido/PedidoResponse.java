@@ -1,6 +1,7 @@
 package com.farmasol.backend.dto.pedido;
 
 import com.farmasol.backend.model.enums.EstadoPedido;
+import com.farmasol.backend.model.enums.TipoEntrega;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +22,7 @@ public class PedidoResponse {
     private Long idCliente;
     private String nombreCliente;
     private EstadoPedido estado;
+    private TipoEntrega tipoEntrega;
     private BigDecimal subtotal;
     private BigDecimal descuentoTotal;
     private BigDecimal costoEnvio;
@@ -30,6 +32,9 @@ public class PedidoResponse {
     private String envioDireccion;
     private String envioDistrito;
     private String envioReferencia;
+    private String recojoSede;
+    private String recojoNombre;
+    private String recojoDni;
     private LocalDateTime fechaPedido;
     private LocalDateTime fechaConfirmacion;
     private LocalDateTime fechaEntrega;

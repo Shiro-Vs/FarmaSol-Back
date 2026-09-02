@@ -9,6 +9,7 @@ import com.farmasol.backend.exception.BusinessException;
 import com.farmasol.backend.exception.ResourceNotFoundException;
 import com.farmasol.backend.model.*;
 import com.farmasol.backend.model.enums.EstadoPedido;
+import com.farmasol.backend.model.enums.TipoEntrega;
 import com.farmasol.backend.repository.*;
 import com.farmasol.backend.service.PedidoService;
 import com.farmasol.backend.service.PrecioService;
@@ -32,6 +33,7 @@ public class PedidoServiceImpl implements PedidoService {
     private final DireccionRepository direccionRepository;
     private final ProductoRepository productoRepository;
     private final PersonalRepository personalRepository;
+    private final SedeRepository sedeRepository;
     private final PrecioService precioService;
 
     @Value("${farmasol.pedido.costo-envio:0}")
@@ -46,22 +48,33 @@ public class PedidoServiceImpl implements PedidoService {
             throw new BusinessException("El carrito está vacío");
         }
 
-        Direccion direccion = direccionRepository.findByIdAndCliente_Id(request.getIdDireccion(), idCliente)
-                .filter(Direccion::getActivo)
-                .orElseThrow(() -> new ResourceNotFoundException("Dirección no encontrada con ID: " + request.getIdDireccion()));
-
-        Pedido pedido = Pedido.builder()
+        Pedido.PedidoBuilder builder = Pedido.builder()
                 .cliente(carrito.getCliente())
-                .direccion(direccion)
                 .estado(EstadoPedido.PENDIENTE)
+                .tipoEntrega(request.getTipoEntrega())
                 .costoEnvio(costoEnvio != null ? costoEnvio : BigDecimal.ZERO)
-                .envioQuienRecibe(direccion.getQuienRecibe())
-                .envioTelefono(direccion.getTelefonoContacto())
-                .envioDireccion(direccion.getDireccion())
-                .envioDistrito(direccion.getDistrito())
-                .envioReferencia(direccion.getReferencia())
-                .notas(request.getNotas())
-                .build();
+                .notas(request.getNotas());
+
+        if (request.getTipoEntrega() == TipoEntrega.DELIVERY) {
+            Direccion direccion = direccionRepository.findByIdAndCliente_Id(request.getIdDireccion(), idCliente)
+                    .filter(Direccion::getActivo)
+                    .orElseThrow(() -> new ResourceNotFoundException("Dirección no encontrada con ID: " + request.getIdDireccion()));
+            builder.direccion(direccion)
+                    .envioQuienRecibe(direccion.getQuienRecibe())
+                    .envioTelefono(direccion.getTelefonoContacto())
+                    .envioDireccion(direccion.getDireccion())
+                    .envioDistrito(direccion.getDistrito())
+                    .envioReferencia(direccion.getReferencia());
+        } else {
+            Sede sede = sedeRepository.findById(request.getIdSede())
+                    .filter(Sede::getActivo)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sede no encontrada con ID: " + request.getIdSede()));
+            builder.recojoSede(sede.getNombre() + " - " + sede.getDireccion())
+                    .recojoNombre(request.getRecojoNombre())
+                    .recojoDni(request.getRecojoDni());
+        }
+
+        Pedido pedido = builder.build();
 
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal descuentoTotal = BigDecimal.ZERO;
@@ -210,6 +223,7 @@ public class PedidoServiceImpl implements PedidoService {
                 .idCliente(p.getCliente().getId())
                 .nombreCliente(p.getCliente().getNombres() + " " + p.getCliente().getApellidos())
                 .estado(p.getEstado())
+                .tipoEntrega(p.getTipoEntrega())
                 .subtotal(p.getSubtotal())
                 .descuentoTotal(p.getDescuentoTotal())
                 .costoEnvio(p.getCostoEnvio())
@@ -219,6 +233,9 @@ public class PedidoServiceImpl implements PedidoService {
                 .envioDireccion(p.getEnvioDireccion())
                 .envioDistrito(p.getEnvioDistrito())
                 .envioReferencia(p.getEnvioReferencia())
+                .recojoSede(p.getRecojoSede())
+                .recojoNombre(p.getRecojoNombre())
+                .recojoDni(p.getRecojoDni())
                 .fechaPedido(p.getFechaPedido())
                 .fechaConfirmacion(p.getFechaConfirmacion())
                 .fechaEntrega(p.getFechaEntrega())

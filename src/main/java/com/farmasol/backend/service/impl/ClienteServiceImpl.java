@@ -72,6 +72,7 @@ public class ClienteServiceImpl implements ClienteService {
                 .apellidos(c.getApellidos())
                 .usuario(c.getUsuario())
                 .correo(c.getCorreo())
+                .dni(c.getDni())
                 .telefono(c.getTelefono())
                 .activo(c.getActivo())
                 .fechaRegistro(c.getFechaRegistro())

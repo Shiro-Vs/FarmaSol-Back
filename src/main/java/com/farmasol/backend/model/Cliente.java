@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "clientes", uniqueConstraints = {
         @UniqueConstraint(name = "uq_clientes_usuario", columnNames = "usuario"),
-        @UniqueConstraint(name = "uq_clientes_correo", columnNames = "correo")
+        @UniqueConstraint(name = "uq_clientes_correo", columnNames = "correo"),
+        @UniqueConstraint(name = "uq_clientes_dni", columnNames = "dni")
 })
 @Getter
 @Setter
@@ -40,6 +41,9 @@ public class Cliente {
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
+
+    @Column(nullable = false, length = 20)
+    private String dni;
 
     @Column(length = 20)
     private String telefono;

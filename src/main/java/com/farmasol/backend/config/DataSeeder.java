@@ -32,14 +32,32 @@ public class DataSeeder implements CommandLineRunner {
     private final CategoriaRepository categoriaRepository;
     private final ProductoRepository productoRepository;
     private final PromocionRepository promocionRepository;
+    private final SedeRepository sedeRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
     public void run(String... args) {
         seedPersonal();
+        seedSedes();
         seedCatalogo();
         seedClienteDemo();
+    }
+
+    private void seedSedes() {
+        if (sedeRepository.count() > 0) {
+            return;
+        }
+        sedeRepository.save(Sede.builder().nombre("Sede Surco")
+                .direccion("Av. Camino del Inca 1240").distrito("Santiago de Surco")
+                .horario("Lun a Sáb 8:00 - 22:00").activo(true).build());
+        sedeRepository.save(Sede.builder().nombre("Sede Miraflores")
+                .direccion("Av. Larco 345").distrito("Miraflores")
+                .horario("Lun a Dom 7:00 - 23:00").activo(true).build());
+        sedeRepository.save(Sede.builder().nombre("Sede San Isidro")
+                .direccion("Av. Javier Prado Este 492").distrito("San Isidro")
+                .horario("Lun a Sáb 8:00 - 21:00").activo(true).build());
+        log.info("Seed: 3 sedes creadas");
     }
 
     private void seedPersonal() {
@@ -109,6 +127,7 @@ public class DataSeeder implements CommandLineRunner {
         clienteRepository.save(Cliente.builder()
                 .nombres("Cliente").apellidos("Demo")
                 .usuario("cliente").correo("cliente@demo.pe")
+                .dni("70000001")
                 .passwordHash(passwordEncoder.encode("Cliente123!"))
                 .telefono("987654321").activo(true)
                 .build());

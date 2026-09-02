@@ -18,6 +18,7 @@ public class ClienteResponse {
     private String apellidos;
     private String usuario;
     private String correo;
+    private String dni;
     private String telefono;
     private Boolean activo;
     private LocalDateTime fechaRegistro;
