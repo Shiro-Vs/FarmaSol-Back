@@ -33,7 +33,8 @@ public class Cliente {
     @Column(nullable = false, length = 100)
     private String apellidos;
 
-    @Column(nullable = false, length = 50)
+    /** Para clientes coincide con el correo (el registro no pide un usuario aparte). */
+    @Column(nullable = false, length = 150)
     private String usuario;
 
     @Column(nullable = false, length = 150)

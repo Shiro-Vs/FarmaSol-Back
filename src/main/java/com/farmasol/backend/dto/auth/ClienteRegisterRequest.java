@@ -8,6 +8,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Registro de cliente. No pide "usuario": el cliente inicia sesión con su correo.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,10 +22,6 @@ public class ClienteRegisterRequest {
 
     @NotBlank(message = "El apellido es obligatorio")
     private String apellidos;
-
-    @NotBlank(message = "El usuario es obligatorio")
-    @Size(min = 3, max = 50, message = "El usuario debe tener entre 3 y 50 caracteres")
-    private String usuario;
 
     @NotBlank(message = "El DNI / Cédula es obligatorio")
     @Size(min = 6, max = 20, message = "El DNI / Cédula debe tener entre 6 y 20 caracteres")

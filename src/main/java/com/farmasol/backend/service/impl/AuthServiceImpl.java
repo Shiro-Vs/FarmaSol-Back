@@ -32,9 +32,6 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse registrarCliente(ClienteRegisterRequest request) {
-        if (clienteRepository.existsByUsuario(request.getUsuario())) {
-            throw new BusinessException("El usuario ya está registrado");
-        }
         if (clienteRepository.existsByCorreo(request.getCorreo())) {
             throw new BusinessException("El correo ya está registrado");
         }
@@ -45,7 +42,7 @@ public class AuthServiceImpl implements AuthService {
         Cliente cliente = Cliente.builder()
                 .nombres(request.getNombres())
                 .apellidos(request.getApellidos())
-                .usuario(request.getUsuario())
+                .usuario(request.getCorreo())
                 .correo(request.getCorreo())
                 .dni(request.getDni())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
