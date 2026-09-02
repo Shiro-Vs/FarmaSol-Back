@@ -30,7 +30,9 @@ public class Login {
     private LocalDateTime fecha_creacion;
 
     public enum Rol {
-        Admin, Usuario
+        Admin,
+        Usuario,
+        Trabajador        
     }
 
     // Getters y Setters (actualizados para el nuevo nombre)

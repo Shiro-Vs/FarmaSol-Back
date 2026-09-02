@@ -21,7 +21,7 @@ public class LoginController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        // Buscamos al usuario por su nombre de usuario (el rol ya no viene en el request)
+        // Buscamos al usuario por su nombre de usuario
         Optional<Login> user = loginRepository.findByUsuario(request.getUsuario());
 
         if (user.isPresent()) {
@@ -29,7 +29,7 @@ public class LoginController {
 
             // Comparamos la contraseña ingresada con la guardada en la BD
             if (login.getPasswordHash().equals(request.getPassword())) {
-                // Devolvemos el rol que tiene el usuario en la BD (Admin o Usuario)
+                // Devolvemos el rol que tiene el usuario en la BD (Admin, Usuario o Trabajador)
                 return ResponseEntity.ok(new LoginResponse(true, "Login exitoso", login.getNombre(), login.getRol().name()));
             } else {
                 return ResponseEntity.status(401).body(new LoginResponse(false, "Usuario o contraseña incorrectos", null, null));
@@ -46,6 +46,12 @@ public class LoginController {
             return ResponseEntity.status(409).body("El usuario ya existe");
         }
 
+        // IMPORTANTE: Solo se permite registrar clientes (Usuario).
+        // Si intentan registrar Admin o Trabajador desde aquí, se rechaza.
+        if (request.getRol() != null && !request.getRol().equalsIgnoreCase("usuario") && !request.getRol().equalsIgnoreCase("cliente")) {
+            return ResponseEntity.status(403).body("Solo se permite registrar clientes");
+        }
+
         // Crear el nuevo usuario
         Login nuevoUsuario = new Login();
         nuevoUsuario.setNombre(request.getNombre());
@@ -55,12 +61,8 @@ public class LoginController {
         nuevoUsuario.setPasswordHash(request.getPassword()); // NOTA: En producción se usa BCrypt
         nuevoUsuario.setActivo(true);
 
-        // ASIGNAR EL ROL SEGÚN LO QUE ENVIÓ EL FRONTEND
-        if ("admin".equalsIgnoreCase(request.getRol())) {
-            nuevoUsuario.setRol(Login.Rol.Admin);
-        } else {
-            nuevoUsuario.setRol(Login.Rol.Usuario); // Cliente por defecto
-        }
+        // ASIGNAR EL ROL: SIEMPRE será Usuario (Cliente) por defecto
+        nuevoUsuario.setRol(Login.Rol.Usuario);
 
         loginRepository.save(nuevoUsuario);
 
@@ -99,6 +101,6 @@ public class LoginController {
             return ResponseEntity.status(409).body("Este correo ya está registrado");
         }
 
-    return ResponseEntity.ok("Correo disponible para registro");
-}
+        return ResponseEntity.ok("Correo disponible para registro");
+    }
 }
