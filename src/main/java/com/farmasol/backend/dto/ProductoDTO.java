@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,6 +12,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * Cuerpo de creación/edición de un producto.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,9 +36,20 @@ public class ProductoDTO {
     @Min(value = 0, message = "El stock no puede ser negativo")
     private Integer stock;
 
-    private String categoria;
+    @NotNull(message = "La categoría es obligatoria")
+    private Long idCategoria;
 
+    @Size(max = 255)
     private String imagenUrl;
 
     private Boolean requiereReceta;
+
+    @Size(max = 100)
+    private String marca;
+
+    @Size(max = 100)
+    private String presentacion;
+
+    @Size(max = 50)
+    private String registroSanitario;
 }

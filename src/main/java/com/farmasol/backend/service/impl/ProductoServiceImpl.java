@@ -1,117 +1,128 @@
 package com.farmasol.backend.service.impl;
 
 import com.farmasol.backend.dto.ProductoDTO;
+import com.farmasol.backend.dto.producto.PrecioCalculadoDTO;
+import com.farmasol.backend.dto.producto.ProductoResponse;
 import com.farmasol.backend.exception.ResourceNotFoundException;
+import com.farmasol.backend.model.Categoria;
 import com.farmasol.backend.model.Producto;
+import com.farmasol.backend.repository.CategoriaRepository;
 import com.farmasol.backend.repository.ProductoRepository;
+import com.farmasol.backend.service.CategoriaService;
+import com.farmasol.backend.service.PrecioService;
 import com.farmasol.backend.service.ProductoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProductoServiceImpl implements ProductoService {
 
     private final ProductoRepository productoRepository;
+    private final CategoriaRepository categoriaRepository;
+    private final CategoriaService categoriaService;
+    private final PrecioService precioService;
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProductoDTO> listarTodos() {
-        return productoRepository.findAll()
-                .stream()
-                .map(this::convertirADTO)
-                .collect(Collectors.toList());
+    public List<ProductoResponse> listar(String busqueda, Long idCategoria,
+                                         boolean incluirSubcategorias, boolean soloActivos) {
+        List<Producto> productos;
+        if (busqueda != null && !busqueda.isBlank()) {
+            productos = productoRepository.findByNombreContainingIgnoreCaseAndActivoTrue(busqueda);
+        } else if (idCategoria != null) {
+            List<Long> ids = incluirSubcategorias ? categoriaService.idsSubarbol(idCategoria) : List.of(idCategoria);
+            productos = productoRepository.findByCategoria_IdInAndActivoTrue(ids);
+        } else if (soloActivos) {
+            productos = productoRepository.findByActivoTrue();
+        } else {
+            productos = productoRepository.findAll();
+        }
+        return productos.stream().map(this::toResponse).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ProductoDTO obtenerPorId(Long id) {
-        Producto producto = productoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
-        return convertirADTO(producto);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProductoDTO> buscarPorNombre(String nombre) {
-        return productoRepository.findByNombreContainingIgnoreCase(nombre)
-                .stream()
-                .map(this::convertirADTO)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProductoDTO> buscarPorCategoria(String categoria) {
-        return productoRepository.findByCategoriaIgnoreCase(categoria)
-                .stream()
-                .map(this::convertirADTO)
-                .collect(Collectors.toList());
+    public ProductoResponse obtenerPorId(Long id) {
+        return toResponse(buscar(id));
     }
 
     @Override
     @Transactional
-    public ProductoDTO guardar(ProductoDTO productoDTO) {
-        Producto producto = convertirAEntidad(productoDTO);
-        Producto productoGuardado = productoRepository.save(producto);
-        return convertirADTO(productoGuardado);
+    public ProductoResponse guardar(ProductoDTO dto) {
+        Producto producto = Producto.builder()
+                .nombre(dto.getNombre())
+                .descripcion(dto.getDescripcion())
+                .precio(dto.getPrecio())
+                .stock(dto.getStock())
+                .categoria(buscarCategoria(dto.getIdCategoria()))
+                .imagenUrl(dto.getImagenUrl())
+                .requiereReceta(dto.getRequiereReceta() != null ? dto.getRequiereReceta() : false)
+                .marca(dto.getMarca())
+                .presentacion(dto.getPresentacion())
+                .registroSanitario(dto.getRegistroSanitario())
+                .activo(true)
+                .build();
+        return toResponse(productoRepository.save(producto));
     }
 
     @Override
     @Transactional
-    public ProductoDTO actualizar(Long id, ProductoDTO productoDTO) {
-        Producto productoExistente = productoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
-
-        productoExistente.setNombre(productoDTO.getNombre());
-        productoExistente.setDescripcion(productoDTO.getDescripcion());
-        productoExistente.setPrecio(productoDTO.getPrecio());
-        productoExistente.setStock(productoDTO.getStock());
-        productoExistente.setCategoria(productoDTO.getCategoria());
-        productoExistente.setImagenUrl(productoDTO.getImagenUrl());
-        productoExistente.setRequiereReceta(productoDTO.getRequiereReceta() != null ? productoDTO.getRequiereReceta() : false);
-
-        Producto productoActualizado = productoRepository.save(productoExistente);
-        return convertirADTO(productoActualizado);
+    public ProductoResponse actualizar(Long id, ProductoDTO dto) {
+        Producto producto = buscar(id);
+        producto.setNombre(dto.getNombre());
+        producto.setDescripcion(dto.getDescripcion());
+        producto.setPrecio(dto.getPrecio());
+        producto.setStock(dto.getStock());
+        producto.setCategoria(buscarCategoria(dto.getIdCategoria()));
+        producto.setImagenUrl(dto.getImagenUrl());
+        producto.setRequiereReceta(dto.getRequiereReceta() != null ? dto.getRequiereReceta() : false);
+        producto.setMarca(dto.getMarca());
+        producto.setPresentacion(dto.getPresentacion());
+        producto.setRegistroSanitario(dto.getRegistroSanitario());
+        return toResponse(productoRepository.save(producto));
     }
 
     @Override
     @Transactional
     public void eliminar(Long id) {
-        if (!productoRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Producto no encontrado con ID: " + id);
-        }
-        productoRepository.deleteById(id);
+        Producto producto = buscar(id);
+        producto.setActivo(false);
+        productoRepository.save(producto);
     }
 
-    // Métodos auxiliares de mapeo
-    private ProductoDTO convertirADTO(Producto entity) {
-        return ProductoDTO.builder()
-                .id(entity.getId())
-                .nombre(entity.getNombre())
-                .descripcion(entity.getDescripcion())
-                .precio(entity.getPrecio())
-                .stock(entity.getStock())
-                .categoria(entity.getCategoria())
-                .imagenUrl(entity.getImagenUrl())
-                .requiereReceta(entity.getRequiereReceta())
-                .build();
+    private Producto buscar(Long id) {
+        return productoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
     }
 
-    private Producto convertirAEntidad(ProductoDTO dto) {
-        return Producto.builder()
-                .id(dto.getId())
-                .nombre(dto.getNombre())
-                .descripcion(dto.getDescripcion())
-                .precio(dto.getPrecio())
-                .stock(dto.getStock())
-                .categoria(dto.getCategoria())
-                .imagenUrl(dto.getImagenUrl())
-                .requiereReceta(dto.getRequiereReceta() != null ? dto.getRequiereReceta() : false)
+    private Categoria buscarCategoria(Long id) {
+        return categoriaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + id));
+    }
+
+    private ProductoResponse toResponse(Producto p) {
+        PrecioCalculadoDTO precio = precioService.calcular(p);
+        return ProductoResponse.builder()
+                .id(p.getId())
+                .nombre(p.getNombre())
+                .descripcion(p.getDescripcion())
+                .precio(p.getPrecio())
+                .precioFinal(precio.getPrecioFinal())
+                .descuentoUnitario(precio.getDescuentoUnitario())
+                .idPromocionAplicada(precio.getIdPromocionAplicada())
+                .stock(p.getStock())
+                .idCategoria(p.getCategoria().getId())
+                .nombreCategoria(p.getCategoria().getNombre())
+                .imagenUrl(p.getImagenUrl())
+                .requiereReceta(p.getRequiereReceta())
+                .marca(p.getMarca())
+                .presentacion(p.getPresentacion())
+                .registroSanitario(p.getRegistroSanitario())
+                .activo(p.getActivo())
                 .build();
     }
 }

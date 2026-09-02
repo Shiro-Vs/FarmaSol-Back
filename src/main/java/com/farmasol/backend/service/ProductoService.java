@@ -1,22 +1,20 @@
 package com.farmasol.backend.service;
 
 import com.farmasol.backend.dto.ProductoDTO;
+import com.farmasol.backend.dto.producto.ProductoResponse;
 
 import java.util.List;
 
 public interface ProductoService {
 
-    List<ProductoDTO> listarTodos();
+    List<ProductoResponse> listar(String busqueda, Long idCategoria, boolean incluirSubcategorias, boolean soloActivos);
 
-    ProductoDTO obtenerPorId(Long id);
+    ProductoResponse obtenerPorId(Long id);
 
-    List<ProductoDTO> buscarPorNombre(String nombre);
+    ProductoResponse guardar(ProductoDTO productoDTO);
 
-    List<ProductoDTO> buscarPorCategoria(String categoria);
+    ProductoResponse actualizar(Long id, ProductoDTO productoDTO);
 
-    ProductoDTO guardar(ProductoDTO productoDTO);
-
-    ProductoDTO actualizar(Long id, ProductoDTO productoDTO);
-
+    /** Baja lógica ({@code activo = false}). */
     void eliminar(Long id);
 }
