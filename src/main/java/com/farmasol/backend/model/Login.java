@@ -18,8 +18,17 @@ public class Login {
     @Column(name = "correo")
     private String correo;
 
-    // Aquí está el cambio: ahora se llama passwordHash en Java
-    // y le decimos a la BD que la columna se llama password_hash
+    @Column(name = "tipo_documento")
+    private String tipoDocumento;
+
+    @Column(name = "numero_documento")
+    private String numeroDocumento;
+
+    @Column(name = "fecha_nacimiento")
+    private java.time.LocalDate fechaNacimiento;
+
+    private String telefono;
+
     @Column(name = "password_hash")
     private String passwordHash;
 
@@ -47,6 +56,15 @@ public class Login {
 
     public String getCorreo() { return correo; }
     public void setCorreo(String correo) { this.correo = correo; }
+
+    public String getTipoDocumento() { return tipoDocumento; }
+    public void setTipoDocumento(String tipoDocumento) { this.tipoDocumento = tipoDocumento; }
+    public String getNumeroDocumento() { return numeroDocumento; }
+    public void setNumeroDocumento(String numeroDocumento) { this.numeroDocumento = numeroDocumento; }
+    public java.time.LocalDate getFechaNacimiento() { return fechaNacimiento; }
+    public void setFechaNacimiento(java.time.LocalDate fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
+    public String getTelefono() { return telefono; }
+    public void setTelefono(String telefono) { this.telefono = telefono; }
 
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
