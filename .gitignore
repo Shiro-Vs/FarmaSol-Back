@@ -36,3 +36,6 @@ build/
 *.suo
 *.user
 *.sqlite
+
+### Archivos subidos (recetas médicas, etc.) ###
+/uploads/

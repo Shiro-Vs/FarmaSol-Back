@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -80,6 +81,14 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 build(HttpStatus.FORBIDDEN, "No tienes permiso para realizar esta acción", request),
                 HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponseDTO> handleArchivoDemasiadoGrande(
+            MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                build(HttpStatus.BAD_REQUEST, "El archivo no puede superar los 5 MB", request),
+                HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

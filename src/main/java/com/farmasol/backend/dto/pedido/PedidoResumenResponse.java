@@ -19,6 +19,7 @@ public class PedidoResumenResponse {
     private String codigoPedido;
     private String nombreCliente;
     private EstadoPedido estado;
+    private Boolean requiereReceta;
     private BigDecimal total;
     private Integer cantidadItems;
     private LocalDateTime fechaPedido;

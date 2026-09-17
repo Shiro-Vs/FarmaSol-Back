@@ -25,9 +25,9 @@ public class PedidoController {
 
     @PostMapping("/checkout")
     @PreAuthorize("hasRole('CLIENTE')")
-    public ResponseEntity<PedidoResponse> checkout(@Valid @RequestBody CheckoutRequest request) {
-        PedidoResponse pedido = pedidoService.checkout(SecurityUtils.getUidActual(), request);
-        return new ResponseEntity<>(pedido, HttpStatus.CREATED);
+    public ResponseEntity<List<PedidoResponse>> checkout(@Valid @RequestBody CheckoutRequest request) {
+        List<PedidoResponse> pedidos = pedidoService.checkout(SecurityUtils.getUidActual(), request);
+        return new ResponseEntity<>(pedidos, HttpStatus.CREATED);
     }
 
     @GetMapping("/mios")

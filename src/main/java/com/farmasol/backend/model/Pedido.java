@@ -53,6 +53,11 @@ public class Pedido {
     @Builder.Default
     private TipoEntrega tipoEntrega = TipoEntrega.DELIVERY;
 
+    /** true si contiene algún producto que requiere receta médica (bloquea CONFIRMADO hasta aprobarla). */
+    @Column(name = "requiere_receta", nullable = false)
+    @Builder.Default
+    private Boolean requiereReceta = false;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;
 

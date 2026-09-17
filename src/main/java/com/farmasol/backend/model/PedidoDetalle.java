@@ -47,4 +47,9 @@ public class PedidoDetalle {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;
+
+    /** Snapshot de producto.requiereReceta al momento de comprar. */
+    @Column(name = "requiere_receta", nullable = false)
+    @Builder.Default
+    private Boolean requiereReceta = false;
 }

@@ -9,6 +9,7 @@ import com.farmasol.backend.exception.BusinessException;
 import com.farmasol.backend.exception.ResourceNotFoundException;
 import com.farmasol.backend.model.*;
 import com.farmasol.backend.model.enums.EstadoPedido;
+import com.farmasol.backend.model.enums.EstadoReceta;
 import com.farmasol.backend.model.enums.TipoEntrega;
 import com.farmasol.backend.repository.*;
 import com.farmasol.backend.service.PedidoService;
@@ -34,6 +35,7 @@ public class PedidoServiceImpl implements PedidoService {
     private final ProductoRepository productoRepository;
     private final PersonalRepository personalRepository;
     private final SedeRepository sedeRepository;
+    private final RecetaRepository recetaRepository;
     private final PrecioService precioService;
 
     @Value("${farmasol.pedido.costo-envio:0}")
@@ -41,22 +43,50 @@ public class PedidoServiceImpl implements PedidoService {
 
     @Override
     @Transactional
-    public PedidoResponse checkout(Long idCliente, CheckoutRequest request) {
+    public List<PedidoResponse> checkout(Long idCliente, CheckoutRequest request) {
         Carrito carrito = carritoRepository.findByCliente_Id(idCliente)
                 .orElseThrow(() -> new BusinessException("El carrito está vacío"));
         if (carrito.getDetalles().isEmpty()) {
             throw new BusinessException("El carrito está vacío");
         }
 
+        List<CarritoDetalle> sinReceta = new ArrayList<>();
+        List<CarritoDetalle> conReceta = new ArrayList<>();
+        for (CarritoDetalle linea : carrito.getDetalles()) {
+            if (Boolean.TRUE.equals(linea.getProducto().getRequiereReceta())) {
+                conReceta.add(linea);
+            } else {
+                sinReceta.add(linea);
+            }
+        }
+
+        // Los productos con receta van en un pedido aparte: no bloquean la compra de los demás.
+        List<Pedido> pedidosCreados = new ArrayList<>();
+        if (!sinReceta.isEmpty()) {
+            pedidosCreados.add(armarPedido(carrito.getCliente(), request, sinReceta, false, pedidosCreados.isEmpty()));
+        }
+        if (!conReceta.isEmpty()) {
+            pedidosCreados.add(armarPedido(carrito.getCliente(), request, conReceta, true, pedidosCreados.isEmpty()));
+        }
+
+        carrito.getDetalles().clear();
+        carritoRepository.save(carrito);
+
+        return pedidosCreados.stream().map(this::toResponse).toList();
+    }
+
+    private Pedido armarPedido(Cliente cliente, CheckoutRequest request, List<CarritoDetalle> lineas,
+                               boolean conReceta, boolean incluyeCostoEnvio) {
         Pedido.PedidoBuilder builder = Pedido.builder()
-                .cliente(carrito.getCliente())
+                .cliente(cliente)
                 .estado(EstadoPedido.PENDIENTE)
                 .tipoEntrega(request.getTipoEntrega())
-                .costoEnvio(costoEnvio != null ? costoEnvio : BigDecimal.ZERO)
+                .requiereReceta(conReceta)
+                .costoEnvio(incluyeCostoEnvio && costoEnvio != null ? costoEnvio : BigDecimal.ZERO)
                 .notas(request.getNotas());
 
         if (request.getTipoEntrega() == TipoEntrega.DELIVERY) {
-            Direccion direccion = direccionRepository.findByIdAndCliente_Id(request.getIdDireccion(), idCliente)
+            Direccion direccion = direccionRepository.findByIdAndCliente_Id(request.getIdDireccion(), cliente.getId())
                     .filter(Direccion::getActivo)
                     .orElseThrow(() -> new ResourceNotFoundException("Dirección no encontrada con ID: " + request.getIdDireccion()));
             builder.direccion(direccion)
@@ -79,7 +109,7 @@ public class PedidoServiceImpl implements PedidoService {
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal descuentoTotal = BigDecimal.ZERO;
 
-        for (CarritoDetalle linea : carrito.getDetalles()) {
+        for (CarritoDetalle linea : lineas) {
             Producto producto = linea.getProducto();
             if (linea.getCantidad() > producto.getStock()) {
                 throw new BusinessException("Stock insuficiente para '" + producto.getNombre()
@@ -96,6 +126,7 @@ public class PedidoServiceImpl implements PedidoService {
                     .descuentoUnitario(precio.getDescuentoUnitario())
                     .cantidad(linea.getCantidad())
                     .subtotal(lineaSubtotal)
+                    .requiereReceta(conReceta)
                     .build();
             pedido.getDetalles().add(detalle);
 
@@ -111,13 +142,9 @@ public class PedidoServiceImpl implements PedidoService {
         pedido.setTotal(total);
 
         Pedido guardado = pedidoRepository.save(pedido);
-        guardado.setCodigoPedido("PED-" + Year.now() + "-" + String.format("%06d", guardado.getId()));
-        guardado = pedidoRepository.save(guardado);
-
-        carrito.getDetalles().clear();
-        carritoRepository.save(carrito);
-
-        return toResponse(guardado);
+        String sufijo = conReceta ? "-R" : "";
+        guardado.setCodigoPedido("PED-" + Year.now() + "-" + String.format("%06d", guardado.getId()) + sufijo);
+        return pedidoRepository.save(guardado);
     }
 
     @Override
@@ -165,6 +192,9 @@ public class PedidoServiceImpl implements PedidoService {
 
         switch (nuevoEstado) {
             case CONFIRMADO -> {
+                if (Boolean.TRUE.equals(pedido.getRequiereReceta()) && !todasLasRecetasAprobadas(pedido)) {
+                    throw new BusinessException("El pedido tiene productos con receta pendientes de aprobación");
+                }
                 pedido.setFechaConfirmacion(LocalDateTime.now());
                 pedido.setAtendidoPor(personal);
             }
@@ -175,6 +205,21 @@ public class PedidoServiceImpl implements PedidoService {
 
         pedido.setEstado(nuevoEstado);
         return toResponse(pedidoRepository.save(pedido));
+    }
+
+    private boolean todasLasRecetasAprobadas(Pedido pedido) {
+        for (PedidoDetalle d : pedido.getDetalles()) {
+            if (!Boolean.TRUE.equals(d.getRequiereReceta())) {
+                continue;
+            }
+            boolean aprobada = recetaRepository.findFirstByPedidoDetalle_IdOrderByFechaSubidaDesc(d.getId())
+                    .map(r -> r.getEstado() == EstadoReceta.APROBADA)
+                    .orElse(false);
+            if (!aprobada) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void reponerStock(Pedido pedido) {
@@ -199,6 +244,7 @@ public class PedidoServiceImpl implements PedidoService {
                 .codigoPedido(p.getCodigoPedido())
                 .nombreCliente(p.getCliente().getNombres() + " " + p.getCliente().getApellidos())
                 .estado(p.getEstado())
+                .requiereReceta(p.getRequiereReceta())
                 .total(p.getTotal())
                 .cantidadItems(items)
                 .fechaPedido(p.getFechaPedido())
@@ -208,14 +254,21 @@ public class PedidoServiceImpl implements PedidoService {
     private PedidoResponse toResponse(Pedido p) {
         List<PedidoDetalleResponse> detalles = new ArrayList<>();
         for (PedidoDetalle d : p.getDetalles()) {
-            detalles.add(PedidoDetalleResponse.builder()
+            var detalleBuilder = PedidoDetalleResponse.builder()
+                    .idPedidoDetalle(d.getId())
                     .idProducto(d.getProducto() != null ? d.getProducto().getId() : null)
                     .nombreProducto(d.getNombreProducto())
                     .precioUnitario(d.getPrecioUnitario())
                     .descuentoUnitario(d.getDescuentoUnitario())
                     .cantidad(d.getCantidad())
                     .subtotal(d.getSubtotal())
-                    .build());
+                    .requiereReceta(d.getRequiereReceta());
+
+            if (Boolean.TRUE.equals(d.getRequiereReceta())) {
+                recetaRepository.findFirstByPedidoDetalle_IdOrderByFechaSubidaDesc(d.getId())
+                        .ifPresent(r -> detalleBuilder.idRecetaVigente(r.getId()).estadoReceta(r.getEstado()));
+            }
+            detalles.add(detalleBuilder.build());
         }
         return PedidoResponse.builder()
                 .id(p.getId())
@@ -224,6 +277,7 @@ public class PedidoServiceImpl implements PedidoService {
                 .nombreCliente(p.getCliente().getNombres() + " " + p.getCliente().getApellidos())
                 .estado(p.getEstado())
                 .tipoEntrega(p.getTipoEntrega())
+                .requiereReceta(p.getRequiereReceta())
                 .subtotal(p.getSubtotal())
                 .descuentoTotal(p.getDescuentoTotal())
                 .costoEnvio(p.getCostoEnvio())

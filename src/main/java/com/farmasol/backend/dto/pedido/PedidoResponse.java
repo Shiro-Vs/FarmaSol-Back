@@ -23,6 +23,7 @@ public class PedidoResponse {
     private String nombreCliente;
     private EstadoPedido estado;
     private TipoEntrega tipoEntrega;
+    private Boolean requiereReceta;
     private BigDecimal subtotal;
     private BigDecimal descuentoTotal;
     private BigDecimal costoEnvio;
